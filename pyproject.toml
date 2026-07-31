@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Mopidy-Platinum"
+version = "0.1.0"
+description = "A server-rendered, no-JavaScript Mopidy web frontend styled after Mac OS 9's Platinum UI, for use on old hardware/browsers (e.g. an iMac G3)."
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Nathan" }]
+classifiers = [
+    "Environment :: No Input/Output (Daemon)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+]
+dependencies = ["Mopidy>=4,<5", "httpx>=0.25", "Pillow>=10"]
+
+[project.urls]
+Source = "https://github.com/example/mopidy-platinum"
+
+[project.entry-points."mopidy.ext"]
+platinum = "mopidy_platinum:Extension"
+
+[tool.setuptools.packages.find]
+include = ["mopidy_platinum*"]
+
+[tool.setuptools.package-data]
+mopidy_platinum = ["ext.conf", "templates/*.html", "static/*.css"]

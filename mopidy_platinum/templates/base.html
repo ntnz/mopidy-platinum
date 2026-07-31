@@ -1,0 +1,28 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>{% block title %}Mopidy{% end %}</title>
+<link rel="stylesheet" type="text/css" href="/platinum/static/style.css">
+{% block head %}{% end %}
+</head>
+<body>
+<table class="window" width="500" cellpadding="0" cellspacing="0" border="0" align="center">
+<tr><td class="titlebar">{{ title_text }}</td></tr>
+<tr><td class="tabbar">
+<table cellpadding="4" cellspacing="0" border="0" width="100%"><tr>
+<td class="{{ 'tab-active' if active_tab == 'now_playing' else 'tab' }}"><a href="/platinum/">Now Playing</a></td>
+<td class="{{ 'tab-active' if active_tab == 'browse' else 'tab' }}"><a href="/platinum/browse">Browse</a></td>
+<td class="{{ 'tab-active' if active_tab == 'playlists' else 'tab' }}"><a href="/platinum/playlists">Playlists</a></td>
+<td class="{{ 'tab-active' if active_tab == 'search' else 'tab' }}"><a href="/platinum/search">Search</a></td>
+<td class="{{ 'tab-active' if active_tab == 'queue' else 'tab' }}"><a href="/platinum/queue">Queue</a></td>
+</tr></table>
+</td></tr>
+{% if error %}
+<tr><td class="error-banner">{{ error }}</td></tr>
+{% end %}
+<tr><td class="content">
+{% block content %}{% end %}
+</td></tr>
+</table>
+</body>
+</html>

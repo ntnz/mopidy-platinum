@@ -1,0 +1,13 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Status</title>
+{% if status_refresh_interval %}
+<meta http-equiv="refresh" content="{{ status_refresh_interval }}">
+{% end %}
+<link rel="stylesheet" type="text/css" href="/platinum/static/style.css">
+</head>
+<body class="status-frame-body">
+<p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
+</body>
+</html>

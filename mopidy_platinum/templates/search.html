@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Search - Mopidy{% end %}
+{% block content %}
+<form method="get" action="/platinum/search">
+<input type="text" name="q" value="{{ q }}" size="24">
+<select name="field">
+<option value="any" {{ 'selected' if field == 'any' else '' }}>Anything</option>
+<option value="track_name" {{ 'selected' if field == 'track_name' else '' }}>Track</option>
+<option value="artist" {{ 'selected' if field == 'artist' else '' }}>Artist</option>
+<option value="album" {{ 'selected' if field == 'album' else '' }}>Album</option>
+</select>
+<input type="submit" class="os9-button" value="Search">
+</form>
+{% if q %}
+<hr>
+{% if tracks %}
+<table width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for track in tracks %}
+<tr>
+<td width="36"><img src="/platinum/art?uri={{ url_escape(track.uri) }}&amp;size=32" width="32" height="32" alt="" border="1"></td>
+<td width="34%">{{ track_display_name(track) }}{% if source_label(track.uri) %} <span class="source-tag">{{ source_label(track.uri) }}</span>{% end %}</td>
+<td width="12%">{{ format_time(track.length) if track.length else "" }}</td>
+<td width="18%">{{ album_name(track) or "" }}</td>
+<td width="24%" align="right">
+<form method="post" action="/platinum/play" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="uri" value="{{ track.uri }}">
+<input type="submit" class="os9-button" value="Play">
+</form>
+<form method="post" action="/platinum/queue/add" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="uri" value="{{ track.uri }}">
+<input type="submit" class="os9-button" value="+ Queue">
+</form>
+</td>
+</tr>
+{% end %}
+</table>
+{% if load_more_url %}
+<p><a href="{{ load_more_url }}">Load more&#8230; ({{ total_count - len(tracks) }} remaining)</a></p>
+{% end %}
+{% else %}
+<p><i>No results.</i></p>
+{% end %}
+{% end %}
+{% end %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Playlists - Mopidy{% end %}
+{% block content %}
+{% if playlists %}
+<table width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for ref in playlists %}
+<tr><td><a href="/platinum/playlist?uri={{ url_escape(ref.uri) }}&amp;name={{ url_escape(ref.name or ref.uri) }}">{{ ref.name or ref.uri }}</a>{% if source_label(ref.uri) %} <span class="source-tag">{{ source_label(ref.uri) }}</span>{% end %}</td></tr>
+{% end %}
+</table>
+{% if load_more_url %}
+<p><a href="{{ load_more_url }}">Load more&#8230; ({{ total_count - len(playlists) }} remaining)</a></p>
+{% end %}
+{% else %}
+<p><i>No playlists found.</i></p>
+{% end %}
+{% end %}

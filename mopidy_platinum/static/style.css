@@ -1,0 +1,119 @@
+body {
+    background-color: #999999;
+    font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
+    font-size: 12px;
+    color: #000000;
+    margin: 0;
+    padding: 20px 0;
+}
+
+table.window {
+    background-color: #DDDDDD;
+    border: 2px outset #EEEEEE;
+}
+
+td.titlebar {
+    background-color: #000080;
+    color: #FFFFFF;
+    padding: 4px 8px;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 2px solid #000000;
+}
+
+td.tabbar {
+    border-bottom: 1px solid #999999;
+    padding: 0;
+}
+
+td.tab, td.tab-active {
+    text-align: center;
+    border: 1px outset #FFFFFF;
+    background-color: #CCCCCC;
+}
+
+td.tab-active {
+    background-color: #FFFFFF;
+    border: 1px inset #999999;
+    font-weight: bold;
+}
+
+td.tab a, td.tab-active a {
+    color: #000000;
+    text-decoration: none;
+}
+
+td.content {
+    padding: 12px;
+}
+
+td.error-banner {
+    background-color: #FFCCCC;
+    border-top: 1px solid #990000;
+    border-bottom: 1px solid #990000;
+    color: #660000;
+    padding: 6px 12px;
+    font-weight: bold;
+}
+
+.os9-button {
+    font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
+    font-size: 11px;
+    background-color: #CCCCCC;
+    border: 2px outset #FFFFFF;
+    padding: 2px 8px;
+    margin: 2px;
+}
+
+.os9-button:active {
+    border: 2px inset #999999;
+}
+
+.track-name {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 4px 0;
+}
+
+.track-status {
+    color: #333333;
+    margin: 0 0 8px 0;
+}
+
+.status-frame {
+    border: none;
+    background: transparent;
+}
+
+.status-frame-body {
+    margin: 0;
+    padding: 0;
+    background-color: #DDDDDD;
+}
+
+.current-track {
+    background-color: #CCCCFF;
+}
+
+.source-tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #333333;
+    background-color: #CCCCCC;
+    border: 1px inset #999999;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #999999;
+    margin: 10px 0;
+}
+
+a {
+    color: #000080;
+}
