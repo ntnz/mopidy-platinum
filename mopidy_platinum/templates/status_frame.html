@@ -1,13 +1,45 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Status</title>
 {% if status_refresh_interval %}
-<meta http-equiv="refresh" content="{{ status_refresh_interval }}">
+<meta http-equiv="refresh" content="{{ status_refresh_interval }};url=/platinum/status?_={{ cache_bust }}">
 {% end %}
-<link rel="stylesheet" type="text/css" href="/platinum/static/style.css">
+<link rel="stylesheet" type="text/css" href="/platinum/static/style.css?_={{ cache_bust }}">
 </head>
 <body class="status-frame-body">
+<p class="track-name">{{ track_name or "(Nothing playing)" }}</p>
 <p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
+{% if progress_percent is not None %}
+{% set segments = 20 %}
+<table class="progress-bar" cellpadding="0" cellspacing="0" border="0" width="220"><tr>
+{% for i in range(segments) %}
+{% set seg_percent = (i + 1) * 100 // segments %}
+<td width="{{ 100 // segments }}%">
+<form method="post" action="/platinum/seek" style="margin:0">
+<input type="hidden" name="return_to" value="/platinum/status">
+<input type="hidden" name="position_ms" value="{{ int((i + 0.5) * duration_ms / segments) }}">
+<input type="submit" class="{{ 'seek-fill' if seg_percent <= progress_percent else 'seek-track' }}" value="">
+</form>
+</td>
+{% end %}
+</tr></table>
+{% end %}
+{% if airplay_status %}
+<p class="track-status"><i>
+{% if airplay_status['error'] %}
+Reconnecting to {{ airplay_device_name }} failed: {{ airplay_status['error'] }}
+{% else %}
+{{ airplay_status['phase'].capitalize() }}&#8230;
+{% end %}
+</i></p>
+{% end %}
+{% if fill_status %}
+<p class="track-status"><i>Queuing "{{ fill_status['playlist_name'] }}": {{ fill_status['queued'] }} of {{ fill_status['total'] }} tracks added so far&#8230;</i></p>
+{% end %}
 </body>
 </html>

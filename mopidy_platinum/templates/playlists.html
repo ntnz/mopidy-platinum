@@ -1,16 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Playlists - Mopidy{% end %}
 {% block content %}
+{% if available_sources %}
+<form method="get" action="/platinum/playlists" class="list-controls">
+Show:
+<select name="source" class="os9-select" onchange="this.form.submit()">
+<option value="">All Sources</option>
+{% for scheme, label in available_sources %}
+<option value="{{ scheme }}" {{ 'selected' if selected_source == scheme else '' }}>{{ label }}</option>
+{% end %}
+</select>
+<input type="submit" class="os9-button" value="Filter">
+</form>
+{% end %}
 {% if playlists %}
-<table width="100%" cellpadding="3" cellspacing="0" border="0">
-{% for ref in playlists %}
-<tr><td><a href="/platinum/playlist?uri={{ url_escape(ref.uri) }}&amp;name={{ url_escape(ref.name or ref.uri) }}">{{ ref.name or ref.uri }}</a>{% if source_label(ref.uri) %} <span class="source-tag">{{ source_label(ref.uri) }}</span>{% end %}</td></tr>
+<table class="list-table" width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for i, ref in enumerate(playlists) %}
+<tr class="{{ 'row-alt' if i % 2 else '' }}">
+<td width="36"><img src="/platinum/art?uri={{ url_escape(ref.uri) }}&amp;size=32&amp;type=playlist" width="32" height="32" alt="" border="1"></td>
+<td><a href="/platinum/playlist?uri={{ url_escape(ref.uri) }}&amp;name={{ url_escape(ref.name or ref.uri) }}">{{ ref.name or ref.uri }}</a>{% if source_label(ref.uri) %} <span class="source-tag">{{ source_label(ref.uri) }}</span>{% end %}</td>
+</tr>
 {% end %}
 </table>
 {% if load_more_url %}
 <p><a href="{{ load_more_url }}">Load more&#8230; ({{ total_count - len(playlists) }} remaining)</a></p>
 {% end %}
 {% else %}
-<p><i>No playlists found.</i></p>
+<p><i>{{ 'No playlists found for this source.' if selected_source else 'No playlists found.' }}</i></p>
 {% end %}
 {% end %}

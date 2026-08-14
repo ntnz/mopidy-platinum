@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}{{ name }} - Mopidy{% end %}
 {% block content %}
 <p><a href="/platinum/playlists">Playlists</a> &raquo; <b>{{ name }}</b>{% if source_label(uri) %} <span class="source-tag">{{ source_label(uri) }}</span>{% end %}</p>
 {% if tracks %}
+<p class="list-controls">
 <form method="post" action="/platinum/playlist/play" style="display:inline">
 <input type="hidden" name="uri" value="{{ uri }}">
 <input type="hidden" name="name" value="{{ name }}">
 <input type="hidden" name="shuffle" value="0">
-<input type="submit" class="os9-button" value="Play All">
+<input type="submit" class="os9-button primary-button" value="Play All" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/playlist/play" style="display:inline">
 <input type="hidden" name="uri" value="{{ uri }}">
 <input type="hidden" name="name" value="{{ name }}">
 <input type="hidden" name="shuffle" value="1">
-<input type="submit" class="os9-button" value="Shuffle All">
+<input type="submit" class="os9-button" value="Shuffle All" onclick="return withFeedback(this)">
 </form>
-<br><br>
-<table width="100%" cellpadding="3" cellspacing="0" border="0">
-{% for track in tracks %}
-<tr>
+</p>
+<table class="list-table" width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for i, track in enumerate(tracks) %}
+<tr class="{{ 'row-alt' if i % 2 else '' }}">
 <td width="36"><img src="/platinum/art?uri={{ url_escape(track.uri) }}&amp;size=32" width="32" height="32" alt="" border="1"></td>
 <td width="34%">{{ track_display_name(track) }}</td>
 <td width="12%">{{ format_time(track.length) if track.length else "" }}</td>
@@ -27,12 +27,12 @@
 <form method="post" action="/platinum/play" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="uri" value="{{ track.uri }}">
-<input type="submit" class="os9-button" value="Play">
+<input type="submit" class="os9-button" value="Play Next" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/queue/add" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="uri" value="{{ track.uri }}">
-<input type="submit" class="os9-button" value="+ Queue">
+<input type="submit" class="os9-button" value="Add to End" onclick="return withFeedback(this)">
 </form>
 </td>
 </tr>

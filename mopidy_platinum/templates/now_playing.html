@@ -1,8 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Now Playing - Mopidy{% end %}
 {% block head %}
 {% if refresh_interval %}
-<meta http-equiv="refresh" content="{{ refresh_interval }}">
+<meta http-equiv="refresh" content="{{ refresh_interval }};url=/platinum/?_={{ cache_bust }}">
 {% end %}
 {% end %}
 {% block content %}
@@ -12,8 +11,8 @@
 <td width="70" valign="top"><img src="/platinum/art?uri={{ url_escape(track_uri) }}&amp;size=64" width="64" height="64" alt="Album art" border="1"></td>
 {% end %}
 <td valign="top">
+<iframe class="status-frame" src="/platinum/status" width="260" height="80" frameborder="0" marginwidth="0" marginheight="0" scrolling="no">
 <p class="track-name">{{ track_name or "(Nothing playing)" }}</p>
-<iframe class="status-frame" src="/platinum/status" width="250" height="20" frameborder="0" marginwidth="0" marginheight="0" scrolling="no">
 <p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
 </iframe>
 </td>
@@ -22,84 +21,63 @@
 <form method="post" action="/platinum/control" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="action" value="previous">
-<input type="submit" class="os9-button" value="&lt;&lt; Prev">
+<input type="image" class="os9-button" src="/platinum/static/icon-prev.png" width="18" height="18" alt="Previous" title="Previous" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/control" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="action" value="{{ 'pause' if is_playing else 'play' }}">
-<input type="submit" class="os9-button" value="{{ 'Pause' if is_playing else 'Play' }}">
+<input type="image" class="os9-button primary-button" src="{{ '/platinum/static/icon-pause.png' if is_playing else '/platinum/static/icon-play.png' }}" width="18" height="18" alt="{{ 'Pause' if is_playing else 'Play' }}" title="{{ 'Pause' if is_playing else 'Play' }}" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/control" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="action" value="stop">
-<input type="submit" class="os9-button" value="Stop">
+<input type="image" class="os9-button" src="/platinum/static/icon-stop.png" width="18" height="18" alt="Stop" title="Stop" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/control" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="action" value="next">
-<input type="submit" class="os9-button" value="Next &gt;&gt;">
+<input type="image" class="os9-button" src="/platinum/static/icon-next.png" width="18" height="18" alt="Next" title="Next" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/shuffle" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
-<input type="submit" class="os9-button" value="{{ 'Shuffle: On' if is_random else 'Shuffle: Off' }}">
+<input type="image" class="os9-button {{ 'toggle-active' if is_random else '' }}" src="/platinum/static/icon-shuffle.png" width="18" height="18" alt="{{ 'Shuffle Off' if is_random else 'Shuffle On' }}" title="{{ 'Shuffle Off' if is_random else 'Shuffle On' }}" onclick="return withFeedback(this)">
 </form>
 </td></tr>
 <tr><td colspan="2" align="center">
 <form method="post" action="/platinum/volume" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
-<input type="hidden" name="delta" value="-10">
-<input type="submit" class="os9-button" value="Vol -">
-</form>
-Volume: {{ volume if volume is not None else "?" }}%
-<form method="post" action="/platinum/volume" style="display:inline">
-<input type="hidden" name="return_to" value="{{ request.uri }}">
-<input type="hidden" name="delta" value="10">
-<input type="submit" class="os9-button" value="Vol +">
+Volume:
+<select name="level" class="os9-select" onchange="this.form.submit()">
+{% if volume is None %}
+<option value="" selected>?</option>
+{% end %}
+{% for pct in range(0, 101, 10) %}
+<option value="{{ pct }}" {{ 'selected' if volume_step == pct else '' }}>{{ pct }}%</option>
+{% end %}
+</select>
+<input type="submit" class="os9-button" value="Set" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/volume" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="mute" value="{{ '0' if mute else '1' }}">
-<input type="submit" class="os9-button" value="{{ 'Unmute' if mute else 'Mute' }}">
+<input type="submit" class="os9-button" value="{{ 'Unmute' if mute else 'Mute' }}" onclick="return withFeedback(this)">
 </form>
-{% if airplay_device_name %}
-<form method="post" action="/platinum/airplay/reconnect" style="display:inline">
-<input type="hidden" name="return_to" value="{{ request.uri }}">
-<input type="submit" class="os9-button" value="Reconnect AirPlay" {{ 'disabled' if (airplay_status and airplay_status['phase']) else '' }}>
-</form>
-{% end %}
 </td></tr>
 </table>
 <hr>
-{% if airplay_status %}
-<p><i>
-{% if airplay_status['error'] %}
-Reconnecting to {{ airplay_device_name }} failed: {{ airplay_status['error'] }}
-{% else %}
-{{ airplay_status['phase'].capitalize() }}&#8230;
-{% end %}
-</i></p>
-{% end %}
-{% if fill_status %}
-<p><i>Queuing "{{ fill_status['playlist_name'] }}": {{ fill_status['queued'] }} of {{ fill_status['total'] }} tracks added so far&#8230;</i></p>
-{% end %}
 <p>
-<b>Up Next</b>{{ ' (shuffled -- only the very next track is predictable)' if is_random else '' }} &mdash;
-{% if live %}
-<a href="/platinum/?live=0">turn off auto-refresh</a>
-{% else %}
-<a href="/platinum/?live=1">turn on auto-refresh</a>
-{% end %}
+<b>Up Next</b>{{ ' (shuffled -- only the very next track is predictable)' if is_random else '' }}
 </p>
 {% if upcoming %}
-<table width="100%" cellpadding="2" cellspacing="0" border="0">
-{% for tl_track in upcoming %}
-<tr>
+<table class="list-table" width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for i, tl_track in enumerate(upcoming) %}
+<tr class="{{ 'row-alt' if i % 2 else '' }}">
 <td>{{ track_display_name(tl_track.track) }}</td>
 <td width="1" align="right">
 <form method="post" action="/platinum/queue/play" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="tlid" value="{{ tl_track.tlid }}">
-<input type="submit" class="os9-button" value="Play">
+<input type="submit" class="os9-button" value="Play Now" onclick="return withFeedback(this)">
 </form>
 </td>
 </tr>

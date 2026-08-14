@@ -1,13 +1,28 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<title>{% block title %}Mopidy{% end %}</title>
-<link rel="stylesheet" type="text/css" href="/platinum/static/style.css">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>{% block title %}{{ title_text }}{% end %}</title>
+<link rel="stylesheet" type="text/css" href="/platinum/static/style.css?_={{ cache_bust }}">
+<script type="text/javascript">
+function withFeedback(btn) {
+    // Disables the button and appends an ellipsis (char code 8230, same
+    // glyph as the "&#8230;" entity used elsewhere) to its own label, so a
+    // second click before the page navigates away is a no-op instead of a
+    // second POST -- and the button itself shows something happened. A
+    // browser without JavaScript just submits the form normally.
+    btn.disabled = true;
+    btn.value = btn.value + String.fromCharCode(8230);
+    return true;
+}
+</script>
 {% block head %}{% end %}
 </head>
 <body>
-<table class="window" width="500" cellpadding="0" cellspacing="0" border="0" align="center">
-<tr><td class="titlebar">{{ title_text }}</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr><td class="tabbar">
 <table cellpadding="4" cellspacing="0" border="0" width="100%"><tr>
 <td class="{{ 'tab-active' if active_tab == 'now_playing' else 'tab' }}"><a href="/platinum/">Now Playing</a></td>
@@ -23,6 +38,28 @@
 <tr><td class="content">
 {% block content %}{% end %}
 </td></tr>
+{% if airplay_device_name or active_tab == 'now_playing' %}
+<tr><td class="footer">
+{% if airplay_device_name %}
+<form method="post" action="/platinum/airplay/reconnect" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="submit" class="footer-button" value="Reconnect AirPlay" onclick="return withFeedback(this)" {{ 'disabled' if (airplay_status and airplay_status['phase']) else '' }}>
+</form>
+{% if airplay_status and airplay_status['error'] %}
+<span class="footer-note">Last attempt failed: {{ airplay_status['error'] }}</span>
+{% end %}
+{% end %}
+{% if active_tab == 'now_playing' %}
+<span class="footer-text">
+{% if live %}
+Auto-refresh: On (<a href="/platinum/?live=0">turn off</a>)
+{% else %}
+Auto-refresh: Off (<a href="/platinum/?live=1">turn on</a>)
+{% end %}
+</span>
+{% end %}
+</td></tr>
+{% end %}
 </table>
 </body>
 </html>

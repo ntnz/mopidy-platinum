@@ -1,24 +1,10 @@
 body {
-    background-color: #999999;
+    background-color: #DCDFE8;
     font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
     font-size: 12px;
     color: #000000;
     margin: 0;
-    padding: 20px 0;
-}
-
-table.window {
-    background-color: #DDDDDD;
-    border: 2px outset #EEEEEE;
-}
-
-td.titlebar {
-    background-color: #000080;
-    color: #FFFFFF;
-    padding: 4px 8px;
-    font-weight: bold;
-    text-align: center;
-    border-bottom: 2px solid #000000;
+    padding: 0;
 }
 
 td.tabbar {
@@ -33,7 +19,12 @@ td.tab, td.tab-active {
 }
 
 td.tab-active {
+    /* The frontmost/focused window gets the pinstripe in genuine Platinum
+       chrome -- background windows stay flat grey. Same idea, applied to
+       "which tab is frontmost" instead of "which window". */
     background-color: #FFFFFF;
+    background-image: url(/platinum/static/pinstripe.png);
+    background-repeat: repeat;
     border: 1px inset #999999;
     font-weight: bold;
 }
@@ -44,7 +35,15 @@ td.tab a, td.tab-active a {
 }
 
 td.content {
+    background-color: #FFFFFF;
     padding: 12px;
+}
+
+/* The one shared gap between a page's row of controls and the list below
+   it -- used identically wherever that pattern occurs, instead of one-off
+   inline margins/line breaks. */
+.list-controls {
+    margin-bottom: 8px;
 }
 
 td.error-banner {
@@ -59,14 +58,84 @@ td.error-banner {
 .os9-button {
     font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
     font-size: 11px;
-    background-color: #CCCCCC;
-    border: 2px outset #FFFFFF;
+    color: #000000;
+    background-color: #E0E0E0;
+    background-image: url(/platinum/static/btn-secondary-gloss.png);
+    background-repeat: repeat-x;
+    border: 1px solid #999999;
     padding: 2px 8px;
     margin: 2px;
 }
 
+/* Shared by every <select> in the app (volume level, playlist source
+   filter, search field) -- a native dropdown's own arrow/popup stays
+   OS-drawn regardless, but the box itself should read as part of the same
+   design language as everything else instead of an unstyled default. */
+.os9-select {
+    font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
+    font-size: 11px;
+    border: 1px solid #999999;
+    background-color: #FFFFFF;
+    padding: 1px;
+    margin: 2px;
+}
+
+.os9-button:hover {
+    border-color: #666666;
+    cursor: pointer;
+}
+
 .os9-button:active {
-    border: 2px inset #999999;
+    background-image: none;
+    background-color: #B8B8BC;
+}
+
+.os9-button:disabled {
+    background-image: none;
+    color: #999999;
+    background-color: #DDDDDD;
+    border-color: #CCCCCC;
+    cursor: default;
+}
+
+/* A toggle that's currently engaged (Shuffle On) -- reuses the same
+   permanently "pressed in" look as :active, since that's exactly the right
+   real-world metaphor for a switch that's currently held down, distinct
+   from .primary-button which marks the page's one default action rather
+   than a toggle's state. */
+.toggle-active {
+    background-image: none;
+    background-color: #B8B8BC;
+    border-color: #666666;
+}
+
+/* Added alongside .os9-button on the one action per screen that's the
+   obvious next thing to do (Play Next, Play All, Play/Pause, Search) --
+   real Platinum dialogs single out a default button the same way, it's just
+   normally a pulsing outline rather than a color, since that's the one bit
+   of animation this CSS2-only styling can't do. */
+.primary-button {
+    color: #FFFFFF;
+    font-weight: bold;
+    background-color: #1A5AC0;
+    background-image: url(/platinum/static/btn-primary-gloss.png);
+    border: 1px solid #0B3D91;
+}
+
+.primary-button:hover {
+    border-color: #082C6B;
+}
+
+.primary-button:active {
+    background-image: none;
+    background-color: #0F3D85;
+}
+
+.primary-button:disabled {
+    background-image: none;
+    color: #999999;
+    background-color: #DDDDDD;
+    border-color: #CCCCCC;
 }
 
 .track-name {
@@ -88,11 +157,60 @@ td.error-banner {
 .status-frame-body {
     margin: 0;
     padding: 0;
-    background-color: #DDDDDD;
+    /* Matches td.content -- this iframe sits inside that white content pane,
+       so its own background has to match or it shows up as a grey box. */
+    background-color: #FFFFFF;
+}
+
+table.list-table tr.row-alt {
+    background-color: #EDEDED;
 }
 
 .current-track {
-    background-color: #CCCCFF;
+    background-color: #C3D9F5;
+}
+
+/* Comes after .row-alt/.current-track so it wins the tie on equal
+   specificity -- lets the mouse-hovered row read clearly regardless of
+   whether it also happens to be a striped or currently-playing row. */
+table.list-table tr:hover {
+    background-color: #E4EBF5;
+}
+
+table.progress-bar {
+    border: 1px inset #999999;
+    background-color: #FFFFFF;
+    margin: 4px 0;
+}
+
+/* Each segment is its own tiny no-JS form -- clicking one seeks to about
+   that point in the track. Styled to butt up seamlessly into one bar. */
+.seek-fill, .seek-track {
+    width: 100%;
+    height: 6px;
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: block;
+    font-size: 1px;
+    line-height: 1px;
+    cursor: pointer;
+}
+
+.seek-fill {
+    background-color: #1A5AC0;
+}
+
+.seek-track {
+    background-color: #FFFFFF;
+}
+
+.seek-track:hover {
+    background-color: #EAEAEA;
+}
+
+.seek-fill:hover {
+    background-color: #0F3D85;
 }
 
 .source-tag {
@@ -100,12 +218,48 @@ td.error-banner {
     font-size: 9px;
     font-weight: bold;
     text-transform: uppercase;
-    color: #333333;
-    background-color: #CCCCCC;
-    border: 1px inset #999999;
+    color: #1A5AC0;
+    background-color: #E4EBF5;
+    border: 1px solid #A8C0E0;
     padding: 1px 5px;
     margin-left: 6px;
     vertical-align: middle;
+}
+
+td.footer {
+    text-align: center;
+    padding: 4px;
+    border-top: 1px solid #999999;
+}
+
+.footer-button {
+    font-family: Geneva, "Trebuchet MS", Arial, sans-serif;
+    font-size: 9px;
+    color: #666666;
+    background-color: #D6DAE4;
+    border: 1px solid #999999;
+    padding: 1px 6px;
+}
+
+.footer-button:disabled {
+    color: #AAAAAA;
+    cursor: default;
+}
+
+.footer-note {
+    font-size: 9px;
+    color: #660000;
+    margin-left: 6px;
+}
+
+.footer-text {
+    font-size: 9px;
+    color: #666666;
+    margin-left: 6px;
+}
+
+.footer-text a {
+    color: #666666;
 }
 
 hr {
@@ -115,5 +269,5 @@ hr {
 }
 
 a {
-    color: #000080;
+    color: #1A5AC0;
 }

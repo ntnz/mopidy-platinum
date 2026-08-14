@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% block title %}Browse - Mopidy{% end %}
 {% block content %}
 <p>
 <a href="/platinum/browse">Library</a>
@@ -11,11 +10,11 @@
 {% end %}
 </p>
 {% if refs %}
-<table width="100%" cellpadding="3" cellspacing="0" border="0">
-{% for ref in refs %}
+<table class="list-table" width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for i, ref in enumerate(refs) %}
 {% set track = tracks_by_uri.get(ref.uri) %}
-<tr>
-<td width="36"><img src="/platinum/art?uri={{ url_escape(ref.uri) }}&amp;size=32" width="32" height="32" alt="" border="1"></td>
+<tr class="{{ 'row-alt' if i % 2 else '' }}">
+<td width="36"><img src="/platinum/art?uri={{ url_escape(ref.uri) }}&amp;size=32&amp;type={{ ref.type }}" width="32" height="32" alt="" border="1"></td>
 <td width="36%">
 {% if ref.type == "track" %}
 {{ ref.name or ref.uri }}
@@ -30,12 +29,12 @@
 <form method="post" action="/platinum/play" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="uri" value="{{ ref.uri }}">
-<input type="submit" class="os9-button" value="Play">
+<input type="submit" class="os9-button primary-button" value="Play Next" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/queue/add" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="uri" value="{{ ref.uri }}">
-<input type="submit" class="os9-button" value="+ Queue">
+<input type="submit" class="os9-button" value="Add to End" onclick="return withFeedback(this)">
 </form>
 {% end %}
 </td>
@@ -46,6 +45,6 @@
 <p><a href="{{ load_more_url }}">Load more&#8230; ({{ total_count - len(refs) }} remaining)</a></p>
 {% end %}
 {% else %}
-<p><i>Nothing here.</i></p>
+<p><i>This folder is empty.</i></p>
 {% end %}
 {% end %}

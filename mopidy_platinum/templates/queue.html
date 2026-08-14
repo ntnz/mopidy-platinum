@@ -1,28 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Queue - Mopidy{% end %}
 {% block content %}
 {% if tl_tracks %}
-<form method="post" action="/platinum/queue/clear" style="margin-bottom:8px">
+<form method="post" action="/platinum/queue/clear" class="list-controls">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
-<input type="submit" class="os9-button" value="Clear Queue">
+<input type="submit" class="os9-button" value="Clear Queue" onclick="return withFeedback(this)">
 </form>
-<table width="100%" cellpadding="3" cellspacing="0" border="0">
-{% for tl_track in tl_tracks %}
-<tr class="{{ 'current-track' if tl_track.tlid == current_tlid else '' }}">
+<table class="list-table" width="100%" cellpadding="3" cellspacing="0" border="0">
+{% for i, tl_track in enumerate(tl_tracks) %}
+<tr class="{{ 'current-track' if tl_track.tlid == current_tlid else ('row-alt' if i % 2 else '') }}">
 <td width="36"><img src="/platinum/art?uri={{ url_escape(tl_track.track.uri) }}&amp;size=32" width="32" height="32" alt="" border="1"></td>
-<td width="30%">{{ track_display_name(tl_track.track) }}</td>
+<td width="34%">{{ track_display_name(tl_track.track) }}</td>
 <td width="12%">{{ format_time(tl_track.track.length) if tl_track.track.length else "" }}</td>
 <td width="18%">{{ album_name(tl_track.track) or "" }}</td>
 <td width="24%" align="right">
 <form method="post" action="/platinum/queue/play" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="tlid" value="{{ tl_track.tlid }}">
-<input type="submit" class="os9-button" value="Play">
+<input type="submit" class="os9-button primary-button" value="Play Now" onclick="return withFeedback(this)">
 </form>
 <form method="post" action="/platinum/queue/remove" style="display:inline">
 <input type="hidden" name="return_to" value="{{ request.uri }}">
 <input type="hidden" name="tlid" value="{{ tl_track.tlid }}">
-<input type="submit" class="os9-button" value="Remove">
+<input type="submit" class="os9-button" value="Remove" onclick="return withFeedback(this)">
 </form>
 </td>
 </tr>
