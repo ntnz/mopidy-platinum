@@ -129,22 +129,41 @@ def test_album_name_returns_album_name():
 
 
 class _FakePlaybackWithTrack:
-    def __init__(self, track):
+    def __init__(self, track, state=PlaybackState.PLAYING):
         self._track = track
+        self._state = state
 
     def get_current_track(self):
         return _ImmediateFuture(self._track)
+
+    def get_state(self):
+        return _ImmediateFuture(self._state)
 
 
 class _FailingPlayback:
     def get_current_track(self):
         return _HangingFuture()
 
+    def get_state(self):
+        return _HangingFuture()
 
-def test_get_title_text_returns_track_display_name_when_playing():
+
+def test_get_title_text_prefixes_playing_track_with_status():
     track = Track(uri="tidal:track:1", name="Song", artists=frozenset({Artist(name="Band")}))
-    core = type("Core", (), {"playback": _FakePlaybackWithTrack(track)})()
-    assert core_helpers.get_title_text(core) == "Band - Song"
+    core = type("Core", (), {"playback": _FakePlaybackWithTrack(track, PlaybackState.PLAYING)})()
+    assert core_helpers.get_title_text(core) == "Playing: Band - Song"
+
+
+def test_get_title_text_prefixes_paused_track_with_status():
+    track = Track(uri="tidal:track:1", name="Song", artists=frozenset({Artist(name="Band")}))
+    core = type("Core", (), {"playback": _FakePlaybackWithTrack(track, PlaybackState.PAUSED)})()
+    assert core_helpers.get_title_text(core) == "Paused: Band - Song"
+
+
+def test_get_title_text_falls_back_to_mopidy_when_stopped():
+    track = Track(uri="tidal:track:1", name="Song", artists=frozenset({Artist(name="Band")}))
+    core = type("Core", (), {"playback": _FakePlaybackWithTrack(track, PlaybackState.STOPPED)})()
+    assert core_helpers.get_title_text(core) == "Mopidy"
 
 
 def test_get_title_text_falls_back_to_mopidy_when_nothing_playing():

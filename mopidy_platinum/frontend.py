@@ -1,4 +1,5 @@
 import random
+import time
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -20,7 +21,10 @@ CONTROL_ACTIONS = {"play", "pause", "stop", "next", "previous"}
 # enough that the reload lands just after the transition (not a hair before
 # it, which would just show the same stale track again until the next poll).
 TRACK_END_REFRESH_BUFFER = 2
-MIN_REFRESH_INTERVAL = 2
+# A full page reload flashes/redraws the whole page on period-appropriate
+# browsers -- floor it well above the status frame's own interval so a track
+# nearing its end can't turn into a rapid-fire reload loop.
+MIN_REFRESH_INTERVAL = 8
 
 # A "Load More" click can only ever grow the page by max_list_items at a
 # time, but nothing stops someone from hand-editing ?limit= in the URL --
@@ -66,6 +70,17 @@ class BaseHandler(tornado.web.RequestHandler):
     def get_template_path(self):
         return str(TEMPLATES_DIR)
 
+    def set_default_headers(self):
+        # Old Mac browsers are prone to aggressively caching a page fetched
+        # via plain HTTP GET -- with a UI that stays "live" via meta-refresh
+        # reloads of that exact same URL, a cached copy shows up as content
+        # that looks frozen/stale rather than an obvious cache problem.
+        # ArtHandler overrides this afterwards for actual images, which
+        # should cache.
+        self.set_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.set_header("Pragma", "no-cache")
+        self.set_header("Expires", "0")
+
     def get_template_namespace(self):
         namespace = super().get_template_namespace()
         namespace["track_display_name"] = core_helpers.track_display_name
@@ -74,6 +89,20 @@ class BaseHandler(tornado.web.RequestHandler):
         namespace["source_label"] = core_helpers.source_label
         namespace["error"] = self.get_query_argument("error", None)
         namespace["title_text"] = core_helpers.get_title_text(self.core)
+        # Appended to meta-refresh targets so each reload looks like a new
+        # URL to the browser, forcing an actual fetch instead of a cache hit.
+        namespace["cache_bust"] = str(int(time.time() * 1000))
+        # Rendered as a small footer control on every page (not just Now
+        # Playing) -- reconnecting is rare and not something a room full of
+        # party guests should be able to stumble into among the main
+        # transport buttons, but it still needs to be reachable from
+        # wherever you happen to be when the audio actually drops.
+        namespace["airplay_device_name"] = self.airplay_device_name
+        namespace["airplay_status"] = airplay_reconnector.status() if self.airplay_device_name else None
+        # Also surfaced as a small footer control everywhere, next to the
+        # AirPlay one -- it's a set-and-forget preference, not something that
+        # needs its own prominent spot next to Up Next.
+        namespace["live"] = self.get_cookie("live", "1") == "1"
         namespace.setdefault("active_tab", None)
         return namespace
 
@@ -124,31 +153,25 @@ class NowPlayingHandler(BaseHandler):
         def render():
             live = self.get_cookie("live", "1") == "1"
             now_playing = core_helpers.get_now_playing(self.core)
-            fill_status = queue_filler.status()
-            airplay_status = airplay_reconnector.status()
             if live:
-                # Refresh faster while a big playlist is still queueing, or an
-                # AirPlay reconnect is in flight, so progress actually looks
-                # like it's moving. The ticking time position itself doesn't
-                # need this -- that lives in its own fast-refreshing frame.
-                airplay_in_progress = bool(airplay_status and airplay_status["phase"])
-                if fill_status or airplay_in_progress:
-                    refresh_interval = min(self.refresh_interval, 3)
+                # Aim the refresh at right around when the current track is
+                # expected to end -- art/track name/queue update almost
+                # immediately on a natural track change, instead of waiting
+                # out the full interval every time. This is the only reason
+                # the whole page ever reloads -- queue-fill/AirPlay progress
+                # lives in the status frame below instead, so those don't
+                # make the full page (and its album art) flash while they're
+                # in flight.
+                seconds_left = core_helpers.seconds_until_track_end(
+                    now_playing["is_playing"], now_playing["time_position_ms"], now_playing["duration_ms"]
+                )
+                if seconds_left is None:
+                    refresh_interval = self.refresh_interval
                 else:
-                    # Otherwise, aim the refresh at right around when the
-                    # current track is expected to end -- art/track name/queue
-                    # update almost immediately on a natural track change,
-                    # instead of waiting out the full interval every time.
-                    seconds_left = core_helpers.seconds_until_track_end(
-                        now_playing["is_playing"], now_playing["time_position_ms"], now_playing["duration_ms"]
+                    refresh_interval = max(
+                        MIN_REFRESH_INTERVAL,
+                        min(self.refresh_interval, seconds_left + TRACK_END_REFRESH_BUFFER),
                     )
-                    if seconds_left is None:
-                        refresh_interval = self.refresh_interval
-                    else:
-                        refresh_interval = max(
-                            MIN_REFRESH_INTERVAL,
-                            min(self.refresh_interval, seconds_left + TRACK_END_REFRESH_BUFFER),
-                        )
             else:
                 refresh_interval = 0
             self.render(
@@ -157,9 +180,6 @@ class NowPlayingHandler(BaseHandler):
                 live=live,
                 refresh_interval=refresh_interval,
                 status_refresh_interval=self.status_refresh_interval,
-                fill_status=fill_status,
-                airplay_status=airplay_status,
-                airplay_device_name=self.airplay_device_name,
                 **now_playing,
             )
 
@@ -167,12 +187,14 @@ class NowPlayingHandler(BaseHandler):
 
 
 class NowPlayingStatusHandler(BaseHandler):
-    """Renders just the ticking "Playing -- 1:23 / 3:45" line, in its own frame.
+    """Renders the ticking "Playing -- 1:23 / 3:45" line plus any in-flight
+    queue-fill/AirPlay status, in its own frame.
 
     Kept separate from NowPlayingHandler so the fast refresh needed for a
-    smooth time display doesn't ever touch the album art or the rest of the
-    page -- polling this costs 3 lightweight core calls instead of the full
-    now-playing set, since nothing else here changes second to second.
+    smooth time display (and for that transient status) doesn't ever touch
+    the album art or the rest of the page -- polling this costs 3 lightweight
+    core calls instead of the full now-playing set, since nothing else here
+    changes second to second.
     """
 
     def get(self):
@@ -181,6 +203,7 @@ class NowPlayingStatusHandler(BaseHandler):
             self.render(
                 "status_frame.html",
                 status_refresh_interval=self.status_refresh_interval,
+                fill_status=queue_filler.status(),
                 **status,
             )
 

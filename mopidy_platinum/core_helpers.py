@@ -90,25 +90,36 @@ SOURCE_LABELS = {
 }
 
 
-def source_label(uri):
+def source_scheme(uri):
     if not uri or ":" not in uri:
         return None
-    scheme = uri.split(":", 1)[0]
-    return SOURCE_LABELS.get(scheme, scheme.capitalize())
+    return uri.split(":", 1)[0]
+
+
+def source_label(uri):
+    scheme = source_scheme(uri)
+    return SOURCE_LABELS.get(scheme, scheme.capitalize()) if scheme else None
 
 
 def get_title_text(core):
-    """Best-effort current-track summary for the title bar.
+    """Best-effort "Playing: Artist - Song" summary for the html <title>.
 
-    Rendered on every page, so this must never be slow or break anything --
-    falls back to "Mopidy" if nothing's playing or the lookup doesn't come
-    back quickly.
+    The track name lives only here now (not in the page body), so the
+    browser's own title bar/tab -- always visible, even while looking at
+    another tab -- is what tells you what's playing. Rendered on every page,
+    so this must never be slow or break anything -- falls back to "Mopidy" if
+    nothing's playing or the lookup doesn't come back quickly.
     """
     try:
+        state = get_result(core.playback.get_state(), timeout=TITLE_TIMEOUT)
         track = get_result(core.playback.get_current_track(), timeout=TITLE_TIMEOUT)
     except Exception:
         return "Mopidy"
-    return track_display_name(track) or "Mopidy"
+    name = track_display_name(track)
+    if not name or state == PlaybackState.STOPPED:
+        return "Mopidy"
+    prefix = "Paused" if state == PlaybackState.PAUSED else "Playing"
+    return f"{prefix}: {name}"
 
 
 def get_playback_status(core):
