@@ -230,15 +230,22 @@ class ArtHandler(BaseHandler):
 
     def get(self):
         uri = self.get_query_argument("uri", None)
+        kind = self.get_query_argument("type", "track")
         try:
             size = int(self.get_query_argument("size", self.DEFAULT_SIZE))
         except ValueError:
             size = self.DEFAULT_SIZE
         size = max(self.MIN_SIZE, min(self.MAX_SIZE, size))
 
-        content_type, image_bytes = art.get_thumbnail(self.core, uri, size)
+        content_type, image_bytes = art.get_thumbnail(self.core, uri, size, kind=kind)
         self.set_header("Content-Type", content_type)
+        # Overrides BaseHandler's blanket no-cache defaults -- unlike the
+        # pages themselves, art for a given uri/size/type never changes, and
+        # old browsers weigh Pragma/Expires at least as heavily as
+        # Cache-Control, so all three need to actually say "cacheable" here.
         self.set_header("Cache-Control", "public, max-age=86400")
+        self.clear_header("Pragma")
+        self.clear_header("Expires")
         self.write(image_bytes)
 
 

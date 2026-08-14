@@ -42,7 +42,7 @@ def _clear_cache():
 def test_returns_placeholder_when_no_image_available():
     core = _FakeCore({})
     content_type, data = art.get_thumbnail(core, "tidal:track:1", 32)
-    assert (content_type, data) == art.PLACEHOLDER
+    assert (content_type, data) == art._placeholder("track", 32)
 
 
 def test_returns_placeholder_on_unsupported_uri_scheme():
@@ -50,7 +50,19 @@ def test_returns_placeholder_on_unsupported_uri_scheme():
 
     core = _FakeCore({"tidal:track:1": (Image(uri="ftp://example/art.jpg"),)})
     content_type, data = art.get_thumbnail(core, "tidal:track:1", 32)
-    assert (content_type, data) == art.PLACEHOLDER
+    assert (content_type, data) == art._placeholder("track", 32)
+
+
+def test_uses_kind_specific_placeholder():
+    core = _FakeCore({})
+    content_type, data = art.get_thumbnail(core, "some:directory:1", 32, kind="directory")
+    assert (content_type, data) == art._placeholder("directory", 32)
+    assert (content_type, data) != art._placeholder("track", 32)
+
+
+def test_unknown_kind_falls_back_to_track_placeholder():
+    core = _FakeCore({})
+    assert art.get_thumbnail(core, "x", 32, kind="bogus") == art._placeholder("track", 32)
 
 
 def test_decodes_data_uri_and_resizes(monkeypatch):
@@ -97,7 +109,7 @@ def test_falls_back_to_placeholder_when_fetch_raises(monkeypatch):
 
     monkeypatch.setattr(httpx, "get", fake_get)
 
-    assert art.get_thumbnail(core, "tidal:track:1", 32) == art.PLACEHOLDER
+    assert art.get_thumbnail(core, "tidal:track:1", 32) == art._placeholder("track", 32)
 
 
 def test_falls_back_to_placeholder_on_corrupt_image_data(monkeypatch):
@@ -110,4 +122,4 @@ def test_falls_back_to_placeholder_on_corrupt_image_data(monkeypatch):
 
     monkeypatch.setattr(httpx, "get", fake_get)
 
-    assert art.get_thumbnail(core, "tidal:track:1", 32) == art.PLACEHOLDER
+    assert art.get_thumbnail(core, "tidal:track:1", 32) == art._placeholder("track", 32)

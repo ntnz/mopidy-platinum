@@ -29,4 +29,4 @@ platinum = "mopidy_platinum:Extension"
 include = ["mopidy_platinum*"]
 
 [tool.setuptools.package-data]
-mopidy_platinum = ["ext.conf", "templates/*.html", "static/*.css"]
+mopidy_platinum = ["ext.conf", "templates/*.html", "static/*.css", "static/*.png"]
