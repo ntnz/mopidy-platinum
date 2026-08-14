@@ -209,16 +209,39 @@ class ControlHandler(BaseHandler):
 
 class VolumeHandler(BaseHandler):
     def post(self):
+        level = self.get_body_argument("level", None)
         delta = self.get_body_argument("delta", None)
         mute = self.get_body_argument("mute", None)
 
         def do_it():
-            if delta is not None:
+            if level is not None:
+                get_result(self.core.mixer.set_volume(max(0, min(100, int(level)))))
+            elif delta is not None:
                 current = get_result(self.core.mixer.get_volume()) or 0
                 new_volume = max(0, min(100, current + int(delta)))
                 get_result(self.core.mixer.set_volume(new_volume))
             if mute is not None:
                 get_result(self.core.mixer.set_mute(mute == "1"))
+
+        self.run_action(do_it, self.get_body_argument)
+
+
+class SeekHandler(BaseHandler):
+    """Backs the click-to-seek progress bar in the status frame.
+
+    A real drag-to-scrub slider risks losing the gesture mid-drag when the
+    status frame's own meta-refresh reloads out from under the cursor (every
+    couple of seconds) -- a single click is well inside that window and
+    submits like every other control here, so it doesn't need any special
+    handling for that.
+    """
+
+    def post(self):
+        position_ms = self.get_body_argument("position_ms", None)
+
+        def do_it():
+            if position_ms is not None:
+                get_result(self.core.playback.seek(int(position_ms)), timeout=LONG_TIMEOUT)
 
         self.run_action(do_it, self.get_body_argument)
 
@@ -315,15 +338,36 @@ class BrowseHandler(BaseHandler):
 class PlaylistsHandler(BaseHandler):
     def get(self):
         limit = self.get_display_limit()
+        selected_source = self.get_query_argument("source", "") or None
 
         def render():
             playlists = get_result(self.core.playlists.as_list(), timeout=LONG_TIMEOUT)
             playlists.sort(key=lambda r: (r.name or r.uri or "").lower())
+
+            # Every source actually present, not every source configured --
+            # no point offering a filter option that would just show an empty
+            # list. Sorted by label so the dropdown order doesn't depend on
+            # whatever order backends happened to respond in.
+            available_sources = sorted(
+                {
+                    (scheme, core_helpers.SOURCE_LABELS.get(scheme, scheme.capitalize()))
+                    for scheme in (core_helpers.source_scheme(p.uri) for p in playlists)
+                    if scheme
+                },
+                key=lambda pair: pair[1].lower(),
+            )
+
+            if selected_source:
+                playlists = [p for p in playlists if core_helpers.source_scheme(p.uri) == selected_source]
+
             visible, total_count = core_helpers.truncate(playlists, limit)
 
             load_more_url = None
             if total_count > len(visible):
-                load_more_url = "/platinum/playlists?" + urlencode({"limit": limit + self.max_list_items})
+                params = {"limit": limit + self.max_list_items}
+                if selected_source:
+                    params["source"] = selected_source
+                load_more_url = "/platinum/playlists?" + urlencode(params)
 
             self.render(
                 "playlists.html",
@@ -331,6 +375,8 @@ class PlaylistsHandler(BaseHandler):
                 playlists=visible,
                 total_count=total_count,
                 load_more_url=load_more_url,
+                available_sources=available_sources,
+                selected_source=selected_source,
             )
 
         self.render_page(render)
@@ -469,13 +515,33 @@ class QueueHandler(BaseHandler):
 
 
 class PlayHandler(BaseHandler):
+    """Queues a single track to play next -- right after whatever's currently
+    playing -- without touching anything already lined up after that.
+
+    With a big playlist queued up, this is what makes it possible to slip a
+    request in without derailing it: nothing already playing gets
+    interrupted, and nothing further down the queue gets bumped except by
+    one slot. Falls back to playing the track immediately if nothing's
+    currently playing, since there's nothing to preserve in that case.
+    """
+
     def post(self):
         uri = self.get_body_argument("uri")
 
         def do_it():
-            tl_tracks = get_result(self.core.tracklist.add(uris=[uri]), timeout=LONG_TIMEOUT)
-            if tl_tracks:
-                get_result(self.core.playback.play(tlid=tl_tracks[0].tlid), timeout=LONG_TIMEOUT)
+            current_tlid = get_result(self.core.playback.get_current_tlid(), timeout=LONG_TIMEOUT)
+            at_position = None
+            if current_tlid is not None:
+                tl_tracks = get_result(self.core.tracklist.get_tl_tracks(), timeout=LONG_TIMEOUT)
+                index = next((i for i, t in enumerate(tl_tracks) if t.tlid == current_tlid), None)
+                if index is not None:
+                    at_position = index + 1
+
+            new_tl_tracks = get_result(
+                self.core.tracklist.add(uris=[uri], at_position=at_position), timeout=LONG_TIMEOUT
+            )
+            if current_tlid is None and new_tl_tracks:
+                get_result(self.core.playback.play(tlid=new_tl_tracks[0].tlid), timeout=LONG_TIMEOUT)
 
         self.run_action(do_it, self.get_body_argument)
 
@@ -534,6 +600,7 @@ def factory(config, core):
         (r"/airplay/reconnect", AirplayReconnectHandler, init),
         (r"/control", ControlHandler, init),
         (r"/volume", VolumeHandler, init),
+        (r"/seek", SeekHandler, init),
         (r"/shuffle", ShuffleToggleHandler, init),
         (r"/art", ArtHandler, init),
         (r"/browse", BrowseHandler, init),

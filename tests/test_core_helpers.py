@@ -182,8 +182,11 @@ def test_get_playback_status_while_playing():
     assert status == {
         "state": PlaybackState.PLAYING,
         "is_playing": True,
+        "track_name": "Song",
         "time_position": "1:05",
         "duration": "3:05",
+        "duration_ms": 185_000,
+        "progress_percent": 35,
     }
 
 
@@ -194,6 +197,17 @@ def test_get_playback_status_with_nothing_playing():
 
     assert status["is_playing"] is False
     assert status["duration"] == "--:--"
+    assert status["progress_percent"] is None
+
+
+def test_get_playback_status_progress_percent_clamped_at_100():
+    # Position can momentarily read past duration right at a track's end.
+    track = Track(uri="tidal:track:1", name="Song", length=100_000)
+    core = type("Core", (), {"playback": _FakePlaybackStatus(PlaybackState.PLAYING, track, 100_500)})()
+
+    status = core_helpers.get_playback_status(core)
+
+    assert status["progress_percent"] == 100
 
 
 def test_seconds_until_track_end_while_playing():
@@ -213,11 +227,15 @@ def test_seconds_until_track_end_clamps_to_zero_past_the_end():
 
 
 class _FakeMixer:
+    def __init__(self, volume=50, mute=False):
+        self._volume = volume
+        self._mute = mute
+
     def get_volume(self):
-        return _ImmediateFuture(50)
+        return _ImmediateFuture(self._volume)
 
     def get_mute(self):
-        return _ImmediateFuture(False)
+        return _ImmediateFuture(self._mute)
 
 
 class _FakeTracklist:
@@ -295,6 +313,37 @@ def test_get_now_playing_upcoming_when_shuffled_only_shows_the_confirmed_next_tr
     assert [tl.tlid for tl in upcoming] == [5]
 
 
+def test_get_now_playing_rounds_volume_to_nearest_step_of_ten():
+    core = type(
+        "Core",
+        (),
+        {
+            "playback": _FakeNowPlayingPlayback(current_tlid=None, track=None),
+            "mixer": _FakeMixer(volume=63),
+            "tracklist": _FakeTracklist([], random_=False),
+        },
+    )()
+
+    now_playing = core_helpers.get_now_playing(core)
+
+    assert now_playing["volume"] == 63
+    assert now_playing["volume_step"] == 60
+
+
+def test_get_now_playing_volume_step_none_when_volume_unknown():
+    core = type(
+        "Core",
+        (),
+        {
+            "playback": _FakeNowPlayingPlayback(current_tlid=None, track=None),
+            "mixer": _FakeMixer(volume=None),
+            "tracklist": _FakeTracklist([], random_=False),
+        },
+    )()
+
+    assert core_helpers.get_now_playing(core)["volume_step"] is None
+
+
 def test_source_label_known_scheme():
     assert core_helpers.source_label("tidal:playlist:123") == "Tidal"
     assert core_helpers.source_label("spotify:track:abc") == "Spotify"
@@ -308,3 +357,15 @@ def test_source_label_none_or_schemeless_uri():
     assert core_helpers.source_label(None) is None
     assert core_helpers.source_label("") is None
     assert core_helpers.source_label("not-a-uri") is None
+
+
+def test_source_scheme_extracts_prefix():
+    assert core_helpers.source_scheme("tidal:playlist:123") == "tidal"
+
+
+def test_source_scheme_none_or_schemeless_uri():
+    assert core_helpers.source_scheme(None) is None
+    assert core_helpers.source_scheme("") is None
+    assert core_helpers.source_scheme("not-a-uri") is None
+
+

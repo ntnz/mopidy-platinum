@@ -122,11 +122,23 @@ def get_playback_status(core):
     state = get_result(core.playback.get_state())
     track = get_result(core.playback.get_current_track())
     time_position = get_result(core.playback.get_time_position())
+    duration_ms = track.length if track else None
+    progress_percent = None
+    if time_position is not None and duration_ms:
+        progress_percent = max(0, min(100, round(time_position / duration_ms * 100)))
     return {
         "state": state,
         "is_playing": state == PlaybackState.PLAYING,
+        "track_name": track_display_name(track),
         "time_position": format_time(time_position),
-        "duration": format_time(track.length if track else None),
+        "duration": format_time(duration_ms),
+        # Raw ms alongside the formatted string, needed client-side to turn a
+        # click position on the progress bar into a seek target.
+        "duration_ms": duration_ms,
+        # Rendered as a table-based bar (no CSS3 gradients/box-shadow needed)
+        # right in the fast-refreshing status frame -- None (no bar at all)
+        # whenever there's nothing to show progress through.
+        "progress_percent": progress_percent,
     }
 
 
@@ -169,6 +181,10 @@ def get_now_playing(core):
         "time_position_ms": time_position,
         "duration_ms": track.length if track else None,
         "volume": volume,
+        # Rounded to the nearest 10 -- the level a single auto-submitting
+        # <select> click can set is that granular, so this is what should
+        # show as selected rather than requiring an exact match.
+        "volume_step": None if volume is None else int(round(volume / 10.0)) * 10,
         "mute": mute,
         "is_random": is_random,
         "track_uri": track.uri if track else None,
