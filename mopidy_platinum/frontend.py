@@ -1,7 +1,7 @@
 import random
 import time
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import tornado.escape
 import tornado.web
@@ -115,9 +115,17 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def redirect_back(self, arg_getter, error=None):
         target = arg_getter("return_to", "/platinum/") or "/platinum/"
+        scheme, netloc, path, query, fragment = urlsplit(target)
+        # return_to is seeded from the page's own request.uri, which -- once
+        # that page has auto-refreshed at least once -- carries the old
+        # cache-busting "_" param from that reload. Redirecting back to that
+        # exact same (already-fetched) URL lets a caching-happy old browser
+        # serve its stale copy instead of re-fetching, e.g. showing the art
+        # for whatever track was playing before a skip rather than after.
+        params = [(k, v) for k, v in parse_qsl(query) if k != "_"]
         if error:
-            separator = "&" if "?" in target else "?"
-            target = f"{target}{separator}error={tornado.escape.url_escape(error)}"
+            params.append(("error", error))
+        target = urlunsplit((scheme, netloc, path, urlencode(params), fragment))
         self.redirect(target)
 
     def run_action(self, action, arg_getter):
