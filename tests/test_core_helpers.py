@@ -202,6 +202,7 @@ def test_get_playback_status_while_playing():
         "state": PlaybackState.PLAYING,
         "is_playing": True,
         "track_name": "Song",
+        "track_uri": "tidal:track:1",
         "time_position": "1:05",
         "duration": "3:05",
         "duration_ms": 185_000,

@@ -1,4 +1,5 @@
 import random
+import re
 import time
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -16,6 +17,11 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
 CONTROL_ACTIONS = {"play", "pause", "stop", "next", "previous"}
+
+# Validates the status frame's optional bg override before it's echoed into
+# an inline bgcolor attribute -- the only caller today (fullscreen.html)
+# always passes a fixed, trusted value, but the endpoint is public.
+HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$")
 
 # How long after a track is expected to end before refreshing for it -- long
 # enough that the reload lands just after the transition (not a hair before
@@ -206,12 +212,32 @@ class NowPlayingStatusHandler(BaseHandler):
     """
 
     def get(self):
+        expected_uri = self.get_query_argument("expected_uri", "")
+        bg = self.get_query_argument("bg", "")
+        if not HEX_COLOR_RE.match(bg):
+            bg = ""
+
         def render():
             status = core_helpers.get_playback_status(self.core)
+            # This frame polls reliably every couple of seconds regardless of
+            # *why* the track changed (natural end, a skip from this UI, or
+            # an external client/remote the outer page has no way to
+            # anticipate) -- so it's the one place that can promptly notice
+            # a mismatch and tell the outer page to catch up, rather than the
+            # outer page trying to predict in advance when to check.
+            track_changed = expected_uri != (status["track_uri"] or "")
             self.render(
                 "status_frame.html",
                 status_refresh_interval=self.status_refresh_interval,
                 fill_status=queue_filler.status(),
+                track_changed=track_changed,
+                bg=bg,
+                # Carried into this frame's own meta-refresh target below --
+                # otherwise every reload after the first drops back to a
+                # plain /status URL with neither param, silently losing the
+                # bg override (and the ability to notice a track change)
+                # from the second reload onward.
+                expected_uri=expected_uri,
                 **status,
             )
 

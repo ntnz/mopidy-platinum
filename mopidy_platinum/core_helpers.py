@@ -141,6 +141,12 @@ def get_playback_status(core):
         "state": state,
         "is_playing": state == PlaybackState.PLAYING,
         "track_name": track_display_name(track),
+        # Compared against whatever uri the outer page was rendered with --
+        # that's how the status frame notices a track changed for a reason
+        # the outer page's own refresh schedule couldn't have predicted (an
+        # external skip via another client/remote, not just reaching this
+        # track's natural end) and tells it to catch up.
+        "track_uri": track.uri if track else None,
         "time_position": format_time(time_position),
         "duration": format_time(duration_ms),
         # Raw ms alongside the formatted string, needed client-side to turn a

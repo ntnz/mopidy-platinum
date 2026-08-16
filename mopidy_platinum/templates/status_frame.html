@@ -7,11 +7,25 @@
 <meta http-equiv="Expires" content="0">
 <title>Status</title>
 {% if status_refresh_interval %}
-<meta http-equiv="refresh" content="{{ status_refresh_interval }};url=/platinum/status?_={{ cache_bust }}">
+<meta http-equiv="refresh" content="{{ status_refresh_interval }};url=/platinum/status?_={{ cache_bust }}&amp;expected_uri={{ url_escape(expected_uri) }}{{ ('&bg=' + bg) if bg else '' }}">
 {% end %}
 <link rel="stylesheet" type="text/css" href="/platinum/static/style.css?_={{ cache_bust }}">
+{% if track_changed %}
+<script type="text/javascript">
+// This frame polls far more often than the outer page reloads, so it's the
+// first to notice a track change -- regardless of whether that's this
+// track reaching its predicted end, a skip from this UI, or something else
+// (another client, a hardware remote) the outer page's own schedule had no
+// way to anticipate. Telling it to reload closes that gap within one poll
+// interval instead of however long the outer page's own next scheduled
+// refresh happens to be.
+if (window.parent && window.parent !== window) {
+    window.parent.location.reload(true);
+}
+</script>
+{% end %}
 </head>
-<body class="status-frame-body">
+<body class="status-frame-body"{% if bg %} bgcolor="#{{ bg }}" style="background-color:#{{ bg }}"{% end %}>
 <p class="track-name">{{ track_name or "(Nothing playing)" }}</p>
 <p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
 {% if progress_percent is not None %}
