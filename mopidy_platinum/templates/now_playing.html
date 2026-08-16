@@ -8,10 +8,10 @@
 <table width="100%" cellpadding="4" cellspacing="0" border="0">
 <tr>
 {% if track_uri %}
-<td width="70" valign="top"><img src="/platinum/art?uri={{ url_escape(track_uri) }}&amp;size=64" width="64" height="64" alt="Album art" border="1"></td>
+<td width="70" valign="top"><a href="/platinum/fullscreen" title="Full Screen"><img src="/platinum/art?uri={{ url_escape(track_uri) }}&amp;size=64" width="64" height="64" alt="Album art -- click for Full Screen" border="1"></a></td>
 {% end %}
 <td valign="top">
-<iframe class="status-frame" src="/platinum/status" width="260" height="80" frameborder="0" marginwidth="0" marginheight="0" scrolling="no">
+<iframe class="status-frame" src="/platinum/status?expected_uri={{ url_escape(track_uri or '') }}" width="260" height="80" frameborder="0" marginwidth="0" marginheight="0" scrolling="no">
 <p class="track-name">{{ track_name or "(Nothing playing)" }}</p>
 <p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
 </iframe>

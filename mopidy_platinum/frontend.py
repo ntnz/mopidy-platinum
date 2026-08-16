@@ -156,6 +156,28 @@ class BaseHandler(tornado.web.RequestHandler):
             self.render("error.html", message=f"Something went wrong: {exc}")
 
 
+def _now_playing_refresh_interval(handler, live, now_playing):
+    """How long until the outer Now Playing/full-screen page should reload.
+
+    Aimed at right around when the current track is expected to end -- this
+    is the *fallback* path for a natural end; a track that changes for any
+    other reason (an external skip via another client/remote) instead gets
+    caught by the status frame's own frequent poll telling this page to
+    reload early (see NowPlayingStatusHandler).
+    """
+    if not live:
+        return 0
+    seconds_left = core_helpers.seconds_until_track_end(
+        now_playing["is_playing"], now_playing["time_position_ms"], now_playing["duration_ms"]
+    )
+    if seconds_left is None:
+        return handler.refresh_interval
+    return max(
+        MIN_REFRESH_INTERVAL,
+        min(handler.refresh_interval, seconds_left + TRACK_END_REFRESH_BUFFER),
+    )
+
+
 class NowPlayingHandler(BaseHandler):
     def get(self):
         live_param = self.get_query_argument("live", None)
@@ -167,30 +189,38 @@ class NowPlayingHandler(BaseHandler):
         def render():
             live = self.get_cookie("live", "1") == "1"
             now_playing = core_helpers.get_now_playing(self.core)
-            if live:
-                # Aim the refresh at right around when the current track is
-                # expected to end -- art/track name/queue update almost
-                # immediately on a natural track change, instead of waiting
-                # out the full interval every time. This is the only reason
-                # the whole page ever reloads -- queue-fill/AirPlay progress
-                # lives in the status frame below instead, so those don't
-                # make the full page (and its album art) flash while they're
-                # in flight.
-                seconds_left = core_helpers.seconds_until_track_end(
-                    now_playing["is_playing"], now_playing["time_position_ms"], now_playing["duration_ms"]
-                )
-                if seconds_left is None:
-                    refresh_interval = self.refresh_interval
-                else:
-                    refresh_interval = max(
-                        MIN_REFRESH_INTERVAL,
-                        min(self.refresh_interval, seconds_left + TRACK_END_REFRESH_BUFFER),
-                    )
-            else:
-                refresh_interval = 0
+            refresh_interval = _now_playing_refresh_interval(self, live, now_playing)
             self.render(
                 "now_playing.html",
                 active_tab="now_playing",
+                live=live,
+                refresh_interval=refresh_interval,
+                status_refresh_interval=self.status_refresh_interval,
+                **now_playing,
+            )
+
+        self.render_page(render)
+
+
+class FullScreenHandler(BaseHandler):
+    """A distraction-free, meant-to-be-viewed-from-across-the-room Now Playing
+    screen -- big album art, big track name/progress, big transport buttons,
+    no tabs/footer/other chrome.
+    """
+
+    def get(self):
+        live_param = self.get_query_argument("live", None)
+        if live_param in ("0", "1"):
+            self.set_cookie("live", live_param)
+            self.redirect("/platinum/fullscreen")
+            return
+
+        def render():
+            live = self.get_cookie("live", "1") == "1"
+            now_playing = core_helpers.get_now_playing(self.core)
+            refresh_interval = _now_playing_refresh_interval(self, live, now_playing)
+            self.render(
+                "fullscreen.html",
                 live=live,
                 refresh_interval=refresh_interval,
                 status_refresh_interval=self.status_refresh_interval,
@@ -305,7 +335,10 @@ class SeekHandler(BaseHandler):
 
 class ArtHandler(BaseHandler):
     MIN_SIZE = 16
-    MAX_SIZE = 128
+    # Big enough for the full-screen view's large centered art (see
+    # FullScreenHandler/fullscreen.html) -- everywhere else still asks for
+    # something much smaller.
+    MAX_SIZE = 512
     DEFAULT_SIZE = 50
 
     def get(self):
@@ -653,6 +686,7 @@ def factory(config, core):
     }
     return [
         (r"/", NowPlayingHandler, init),
+        (r"/fullscreen", FullScreenHandler, init),
         (r"/status", NowPlayingStatusHandler, init),
         (r"/airplay/reconnect", AirplayReconnectHandler, init),
         (r"/control", ControlHandler, init),

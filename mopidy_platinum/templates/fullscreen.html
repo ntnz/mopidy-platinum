@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>{{ title_text }}</title>
+{% if refresh_interval %}
+<meta http-equiv="refresh" content="{{ refresh_interval }};url=/platinum/fullscreen?_={{ cache_bust }}">
+{% end %}
+<link rel="stylesheet" type="text/css" href="/platinum/static/style.css?_={{ cache_bust }}">
+<script type="text/javascript">
+function withFeedback(btn) {
+    btn.disabled = true;
+    btn.value = btn.value + String.fromCharCode(8230);
+    return true;
+}
+</script>
+</head>
+<body class="fullscreen-body">
+<table width="100%" height="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td align="center" valign="middle">
+
+{% if track_uri %}
+<img src="/platinum/art?uri={{ url_escape(track_uri) }}&amp;size=280" width="280" height="280" alt="Album art" border="1"><br>
+{% end %}
+
+<iframe class="status-frame" src="/platinum/status?expected_uri={{ url_escape(track_uri or '') }}&amp;bg=DCDFE8" width="300" height="66" frameborder="0" marginwidth="0" marginheight="0" scrolling="no">
+<p class="fullscreen-track-name">{{ track_name or "(Nothing playing)" }}</p>
+<p class="track-status">{{ state.capitalize() }} &mdash; {{ time_position }} / {{ duration }}</p>
+</iframe>
+
+<p>
+<form method="post" action="/platinum/control" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="action" value="previous">
+<input type="image" class="os9-button" src="/platinum/static/icon-prev.png" width="28" height="28" alt="Previous" title="Previous" onclick="return withFeedback(this)">
+</form>
+<form method="post" action="/platinum/control" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="action" value="{{ 'pause' if is_playing else 'play' }}">
+<input type="image" class="os9-button primary-button" src="{{ '/platinum/static/icon-pause.png' if is_playing else '/platinum/static/icon-play.png' }}" width="28" height="28" alt="{{ 'Pause' if is_playing else 'Play' }}" title="{{ 'Pause' if is_playing else 'Play' }}" onclick="return withFeedback(this)">
+</form>
+<form method="post" action="/platinum/control" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="action" value="stop">
+<input type="image" class="os9-button" src="/platinum/static/icon-stop.png" width="28" height="28" alt="Stop" title="Stop" onclick="return withFeedback(this)">
+</form>
+<form method="post" action="/platinum/control" style="display:inline">
+<input type="hidden" name="return_to" value="{{ request.uri }}">
+<input type="hidden" name="action" value="next">
+<input type="image" class="os9-button" src="/platinum/static/icon-next.png" width="28" height="28" alt="Next" title="Next" onclick="return withFeedback(this)">
+</form>
+</p>
+
+<p class="fullscreen-exit"><a href="/platinum/">Exit Full Screen</a></p>
+
+</td>
+</tr></table>
+</body>
+</html>

@@ -7,6 +7,42 @@ body {
     padding: 0;
 }
 
+/* html needs an explicit height for the body/table's height="100%" below to
+   resolve against anything real -- without it, a percentage height has
+   nothing to be a percentage OF, and some engines just collapse it to the
+   content's own size instead of the actual viewport. */
+html {
+    height: 100%;
+}
+
+/* Standalone kiosk-style Now Playing view -- meant to be left on screen and
+   viewed from across a room, so everything here is bigger and there's no
+   tab bar/footer/other chrome to read at that distance. Same light Platinum
+   palette as everywhere else (Mac OS 9 never had a "dark mode" -- that's a
+   much later convention), not a separate black theme.  */
+.fullscreen-body {
+    background-color: #DCDFE8;
+    color: #000000;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.fullscreen-track-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 10px 0 4px 0;
+}
+
+.fullscreen-exit {
+    margin-top: 8px;
+}
+
+.fullscreen-exit a {
+    color: #666666;
+    font-size: 11px;
+}
+
 td.tabbar {
     border-bottom: 1px solid #999999;
     padding: 0;
