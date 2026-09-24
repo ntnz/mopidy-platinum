@@ -14,8 +14,19 @@ function withFeedback(btn) {
     // second click before the page navigates away is a no-op instead of a
     // second POST -- and the button itself shows something happened. A
     // browser without JavaScript just submits the form normally.
-    btn.disabled = true;
-    btn.value = btn.value + String.fromCharCode(8230);
+    //
+    // Deferred via setTimeout(0) -- disabling the button *synchronously*
+    // inside its own click handler, before this function returns, cancels
+    // the pending form submission entirely on Firefox (confirmed live: the
+    // button visibly disables, but no request -- not even a stalled one --
+    // ever reaches the network tab). Not a Classilla-only quirk after all.
+    // Deferring by a tick lets the click's default action (the actual form
+    // submit) get dispatched first; the button still ends up disabled fast
+    // enough to block a genuine second click.
+    setTimeout(function () {
+        btn.disabled = true;
+        btn.value = btn.value + String.fromCharCode(8230);
+    }, 0);
     return true;
 }
 </script>
